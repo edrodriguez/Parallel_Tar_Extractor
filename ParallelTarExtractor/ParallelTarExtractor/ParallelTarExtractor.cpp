@@ -1,7 +1,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <stdlib.h> 
+#include <stdlib.h>
 
 using namespace std;
 
@@ -24,7 +24,6 @@ tar_header readHeader(ifstream& inputFile, int nextHeaderBlock)
 	inputFile.seekg( (nextHeaderBlock * 512));
 	cout << "before header read" << inputFile.tellg() << endl;
 	inputFile.read((char *)&header, sizeof(header));
-	cout << "after header read" << inputFile.tellg() << endl;
 
 	return header;
 }
@@ -44,8 +43,8 @@ void writeBody(ifstream& inputFile, tar_header& header) {
 	char* body = new char [size];
 
 	outFile.open(header.name);
-	cout << "before body read" << inputFile.tellg() << endl;
-	inputFile.read(body, size); //reading 10 more chars than it should, which are gone before the next read file??
+	inputFile.read(body, size);
+	body[size] = '\0';//reading 10 more chars than it should, which are gone before the next read file??
 	cout << "after body read" << inputFile.tellg() << endl;
 
 	outFile << body;
@@ -67,11 +66,10 @@ int main(int argc, char *argv[])
 				//read header
 				tar_header header = readHeader(inputFile, nextHeaderBlock);
 				//fork
-			
 
-				//if child
+					//if child
 					nextHeaderBlock += ((511 + convertSizeToInt(header.size)) / 512) + 1; //an offset of 512 is the full header
-					//continue;
+					continue;
 
 				//if parent
 				int checksum = strtol(header.checksum, NULL, 8);
