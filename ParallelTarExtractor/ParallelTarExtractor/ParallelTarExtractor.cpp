@@ -22,7 +22,6 @@ tar_header readHeader(ifstream& inputFile, int nextHeaderBlock)
 {
 	tar_header header;
 	inputFile.seekg( (nextHeaderBlock * 512));
-	cout << "before header read" << inputFile.tellg() << endl;
 	inputFile.read((char *)&header, sizeof(header));
 
 	return header;
@@ -44,8 +43,7 @@ void writeBody(ifstream& inputFile, tar_header& header) {
 
 	outFile.open(header.name);
 	inputFile.read(body, size);
-	body[size] = '\0';//reading 10 more chars than it should, which are gone before the next read file??
-	cout << "after body read" << inputFile.tellg() << endl;
+	body[size] = '\0';
 
 	outFile << body;
 	outFile.close();
@@ -60,6 +58,7 @@ int main(int argc, char *argv[])
 	{
 		string tarFileName = argv[1];
 		inputFile.open(tarFileName);
+
 		if (inputFile.good())
 		{
 			do {
@@ -69,8 +68,8 @@ int main(int argc, char *argv[])
 
 					//if child
 					nextHeaderBlock += ((511 + convertSizeToInt(header.size)) / 512) + 1; //an offset of 512 is the full header
-					continue;
-
+					//continue;
+				
 				//if parent
 				int checksum = strtol(header.checksum, NULL, 8);
 
