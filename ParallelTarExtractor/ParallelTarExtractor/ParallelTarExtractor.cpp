@@ -1,9 +1,10 @@
-#include <string>
+#include <string.h>
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <cstdlib>
 
 using namespace std;
 
@@ -74,13 +75,24 @@ void writeBody(ifstream& inputFile, tar_header& header) {
 	//calculate size of body
 	int size = convertSizeToInt(header.size);
 	char* body = new char [size];
+	string name = header.name;
 
-	outFile.open(header.name);
-	inputFile.read(body, size);
-	body[size] = '\0';
+	if (name[sizeof(name) - 1] == '/')
+	{
+		string strInst = "mkdir -p " + name;
+		char * instruction;
+		strcpy(instruction, strInst.c_str());
+		system(instruction);
+	}
+	else
+	{
+		outFile.open(name);
+		inputFile.read(body, size);
+		body[size] = '\0';
 
-	outFile << body;
-	outFile.close();
+		outFile << body;
+		outFile.close();
+	}
 }
 
 int main(int argc, char *argv[])
