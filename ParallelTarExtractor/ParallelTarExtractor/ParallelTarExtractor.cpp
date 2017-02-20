@@ -39,6 +39,16 @@ bool nextHeader(ifstream& inputFile, int nextHeaderBlock)
 	return true;
 }
 
+bool hasNext(ifstream& inputFile, int nextHeaderBlock)
+{
+	//check if end of file
+	int currentPosition = inputFile.cur;
+	bool next = nextHeader(inputFile, nextHeaderBlock);
+	inputFile.seekg(currentPosition);
+
+	return next;
+}
+
 tar_header readHeader(ifstream& inputFile, int nextHeaderBlock)
 {
 	tar_header header;
@@ -96,11 +106,11 @@ int main(int argc, char *argv[])
 				nextHeaderBlock += ((511 + convertSizeToInt(header.size)) / 512) + 1; //an offset of 512 is the full header
 
 				//fork
-				pid_t pid = -1;
-				if (nextHeader(inputFile, nextHeaderBlock))
-				{
-					pid = fork();
-				}
+				//pid_t pid = -1;
+				//if (hasNext(inputFile, nextHeaderBlock))
+				//{
+					pid_t pid = fork();
+				//}
 				//else
 				//	break;
 
