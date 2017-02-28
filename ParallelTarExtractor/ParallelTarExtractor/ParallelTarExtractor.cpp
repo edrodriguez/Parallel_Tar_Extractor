@@ -3,7 +3,7 @@
 #include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
-//#include <unistd.h>
+#include <unistd.h>
 #include <cstdlib>
 
 using namespace std;
@@ -114,8 +114,7 @@ int main(int argc, char *argv[])
 				nextHeaderBlock += ((511 + convertSizeToInt(header.size)) / 512) + 1; //an offset of 512 is the full header
 
 				//fork
-				int pid = 0;
-				//pid_t pid = fork();
+				pid_t pid = fork();
 
 				if (pid == 0)
 				{
@@ -140,7 +139,7 @@ int main(int argc, char *argv[])
 				//write to file
 				if (computedChecksum == checksum)
 					writeBody(inputFile, header);
-				//return EXIT_SUCCESS;
+				return EXIT_SUCCESS;
 
 			} while (nextHeader(inputFile, nextHeaderBlock)); //there are more headers
 
