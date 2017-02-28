@@ -30,13 +30,10 @@ bool nextHeader(ifstream& inputFile, int nextHeaderBlock)
 	inputFile.seekg((nextHeaderBlock * 512));
 
 	//Check that the next header has content. If not go to the next block
-	while (inputFile.peek() == '\0' && inputFile.good())
-	{
-		inputFile.seekg(512, inputFile.cur);
-		if (!inputFile.good())
-			return false;
-	}
-	if (inputFile.good())
+	if (inputFile.peek() == '\0' && inputFile.good())
+		return false;
+	
+	if (inputFile.good() && !inputFile.eof())
 		return true;
 }
 
@@ -118,20 +115,13 @@ int main(int argc, char *argv[])
 
 				//fork
 				int pid = 0;
-				//pid_t pid = -1;
-				if (hasNext(inputFile, nextHeaderBlock))
-				{
-					//pid_t pid = fork();
-				}
-				//else
-				//	break;
+				//pid_t pid = fork();
 
 				if (pid == 0)
 				{
 					//if child
 					cout << "reading with child process" << endl;
-					//nextHeaderBlock += ((511 + convertSizeToInt(header.size)) / 512) + 1; //an offset of 512 is the full header
-					//continue;
+					continue;
 				}
 
 				//if parent
