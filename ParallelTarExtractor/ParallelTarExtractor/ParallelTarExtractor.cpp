@@ -3,7 +3,7 @@
 #include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <cstdlib>
 
 using namespace std;
@@ -36,14 +36,14 @@ bool nextHeader(ifstream& inputFile, int nextHeaderBlock)
 		if (!inputFile.good())
 			return false;
 	}
-
-	return true;
+	if (inputFile.good())
+		return true;
 }
 
 bool hasNext(ifstream& inputFile, int nextHeaderBlock)
 {
 	//check if end of file
-	int currentPosition = inputFile.cur;
+	int currentPosition = inputFile.tellg();
 	bool next = nextHeader(inputFile, nextHeaderBlock);
 	inputFile.seekg(currentPosition);
 
@@ -58,7 +58,6 @@ tar_header readHeader(ifstream& inputFile, int nextHeaderBlock)
 	//	inputFile.seekg(512, inputFile.cur);
 
 	inputFile.read((char *)&header, sizeof(header));
-
 	return header;
 }
 
@@ -77,12 +76,12 @@ void writeBody(ifstream& inputFile, tar_header& header) {
 	char* body = new char [size];
 	string name = header.name;
 
-	if (name[sizeof(name) - 1] == '/')
+	if (name[name.size() - 1] == '/')
 	{
-		string strInst = "mkdir -p " + name;
+		string strInst = "mkdir -p " + name; //will not work if you dont remove the '/'
 		char * instruction;
 		strcpy(instruction, strInst.c_str());
-		system(instruction);
+		system(instruction); //use c call instead
 	}
 	else
 	{
@@ -118,11 +117,12 @@ int main(int argc, char *argv[])
 				nextHeaderBlock += ((511 + convertSizeToInt(header.size)) / 512) + 1; //an offset of 512 is the full header
 
 				//fork
+				int pid = 0;
 				//pid_t pid = -1;
-				//if (hasNext(inputFile, nextHeaderBlock))
-				//{
-					pid_t pid = fork();
-				//}
+				if (hasNext(inputFile, nextHeaderBlock))
+				{
+					//pid_t pid = fork();
+				}
 				//else
 				//	break;
 
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 					//if child
 					cout << "reading with child process" << endl;
 					//nextHeaderBlock += ((511 + convertSizeToInt(header.size)) / 512) + 1; //an offset of 512 is the full header
-					continue;
+					//continue;
 				}
 
 				//if parent
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 				//write to file
 				if (computedChecksum == checksum)
 					writeBody(inputFile, header);
-				return EXIT_SUCCESS;
+				//return EXIT_SUCCESS;
 
 			} while (nextHeader(inputFile, nextHeaderBlock)); //there are more headers
 
