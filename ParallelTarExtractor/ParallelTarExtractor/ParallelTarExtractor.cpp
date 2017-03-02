@@ -3,7 +3,10 @@
 #include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <cstdlib>
 
 using namespace std;
@@ -37,23 +40,9 @@ bool nextHeader(ifstream& inputFile, int nextHeaderBlock)
 		return true;
 }
 
-bool hasNext(ifstream& inputFile, int nextHeaderBlock)
-{
-	//check if end of file
-	int currentPosition = inputFile.tellg();
-	bool next = nextHeader(inputFile, nextHeaderBlock);
-	inputFile.seekg(currentPosition);
-
-	return next;
-}
-
 tar_header readHeader(ifstream& inputFile, int nextHeaderBlock)
 {
 	tar_header header;
-	//inputFile.seekg( (nextHeaderBlock * 512));
-	//while (inputFile.peek() == '/0')
-	//	inputFile.seekg(512, inputFile.cur);
-
 	inputFile.read((char *)&header, sizeof(header));
 	return header;
 }
@@ -65,29 +54,38 @@ int convertSizeToInt(char size[12])
 	return sizeInt;
 }
 
-void writeBody(ifstream& inputFile, tar_header& header) {
+void writeBody(ifstream& inputFile, string mainDir, tar_header& header) {
 	ofstream outFile;
 
 	//calculate size of body
 	int size = convertSizeToInt(header.size);
-	char* body = new char [size];
-	string name = header.name;
+	string name = mainDir + "/" + header.name;
 
 	if (name[name.size() - 1] == '/')
 	{
-		string strInst = "mkdir -p " + name; //will not work if you dont remove the '/'
-		char * instruction;
-		strcpy(instruction, strInst.c_str());
-		system(instruction); //use c call instead
+		name = name.substr(0, name.size() - 1);
+		int status = mkdir(name.c_str(), 0700);
+		if (status != 0)
+		{
+			string error = "Couldn't make Directory" + name;
+			perror(error.c_str());
+		}
+		else
+			cout << "Created directory: " << name.c_str() << endl;
+		
+		
 	}
 	else
 	{
+		char* body = new char[size];
 		outFile.open(name);
 		inputFile.read(body, size);
-		body[size] = '\0';
+		body[size - 1] = '\0';
 
 		outFile << body;
 		outFile.close();
+
+		cout << "Created File: " << name.c_str() << endl;
 	}
 }
 
@@ -99,6 +97,14 @@ int main(int argc, char *argv[])
 	if (argv[1] != nullptr)
 	{
 		string tarFileName = argv[1];
+		string mainDir = tarFileName + "Dir";
+		int status = mkdir(mainDir.c_str(), 0700);
+		if (status != 0)
+		{
+			string error = "Couldn't make Directory" + mainDir;
+			perror(error.c_str());
+		}
+
 		inputFile.open(tarFileName);
 
 		inputFile.seekg(0, inputFile.end);
@@ -119,7 +125,7 @@ int main(int argc, char *argv[])
 				if (pid == 0)
 				{
 					//if child
-					cout << "reading with child process" << endl;
+					//cout << "reading with child process" << endl;
 					continue;
 				}
 
@@ -138,7 +144,7 @@ int main(int argc, char *argv[])
 				}
 				//write to file
 				if (computedChecksum == checksum)
-					writeBody(inputFile, header);
+					writeBody(inputFile, mainDir, header);
 				return EXIT_SUCCESS;
 
 			} while (nextHeader(inputFile, nextHeaderBlock)); //there are more headers
