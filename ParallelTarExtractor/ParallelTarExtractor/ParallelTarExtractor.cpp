@@ -12,6 +12,7 @@
 
 using namespace std;
 
+//structure of a tar header
 struct tar_header {
 	char name[100];
 	char mode[8];
@@ -25,6 +26,8 @@ struct tar_header {
 	char pad[255];
 };
 
+//Checks if there is another header to read, if there is it will move the position of
+//reading to the start of the header and it will return true, otherwise will return false
 bool nextHeader(ifstream& inputFile, int nextHeaderBlock, int lengthOfFile, int position)
 {
 	//check if the file is actually done or a eof character was read but there is more content
@@ -47,6 +50,7 @@ bool nextHeader(ifstream& inputFile, int nextHeaderBlock, int lengthOfFile, int 
 	return false;
 }
 
+//reads a tar header
 tar_header readHeader(ifstream& inputFile, int nextHeaderBlock, int position)
 {
 	tar_header header;
@@ -55,6 +59,7 @@ tar_header readHeader(ifstream& inputFile, int nextHeaderBlock, int position)
 	return header;
 }
 
+//converts a 12 bit octal number to an int
 int convertSizeToInt(char size[12])
 {
 	int sizeInt = strtol(size, NULL, 8);
@@ -62,6 +67,9 @@ int convertSizeToInt(char size[12])
 	return sizeInt;
 }
 
+//if header indicates a directory it creates a directory with the name indicated
+//if header indicates a file it creates a file with the name indicated and it
+//writes the contents of the body of the file
 void writeBody(ifstream& inputFile, string mainDir, tar_header& header) {
 	ofstream outFile;
 
@@ -71,6 +79,7 @@ void writeBody(ifstream& inputFile, string mainDir, tar_header& header) {
 
 	if (name[name.size() - 1] == '/')
 	{
+		//header indicated directory
 		name = name.substr(0, name.size() - 1);
 		int status = mkdir(name.c_str(), 0700);
 		if (status != 0)
@@ -85,6 +94,7 @@ void writeBody(ifstream& inputFile, string mainDir, tar_header& header) {
 	}
 	else
 	{
+		//header indicated file
 		char* body = new char[size];
 		vector<char> bodyV;
 		bodyV.resize(size);
@@ -108,6 +118,8 @@ int main(int argc, char *argv[])
 	if (argv[1] != nullptr)
 	{
 		string tarFileName = argv[1];
+
+		//creates a base directory where the files will be extracted to
 		string mainDir = tarFileName + "Dir";
 		int status = mkdir(mainDir.c_str(), 0700);
 		if (status != 0)
@@ -125,7 +137,7 @@ int main(int argc, char *argv[])
 
 		if (inputFile.good())
 		{
-			do
+			do //do loop while there are more headers to read
 			{
 				//read header
 				tar_header header = readHeader(inputFile, nextHeaderBlock, position);
@@ -137,11 +149,12 @@ int main(int argc, char *argv[])
 				if (pid == 0)
 				{
 					//if child wait to avoid creation of files before directories
+					//and then continue to read the next header if available
 					sleep(2);
 					continue;
 				}
 
-				//if parent
+				//if parent continue with the computations and write the contents of the body
 				int checksum = strtol(header.checksum, NULL, 8);
 
 				// Put spaces in the checksum area before we compute it.
@@ -162,6 +175,7 @@ int main(int argc, char *argv[])
 			} while (nextHeader(inputFile, nextHeaderBlock, lengthOfFile, position)); //there are more headers
 
 			inputFile.close();
+			cout << "Done with extraction of " << tarFileName.c_str() << endl;
 			return EXIT_SUCCESS;
 		}
 		else
