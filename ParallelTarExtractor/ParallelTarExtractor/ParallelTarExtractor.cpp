@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <cstdlib>
+#include <vector>
 
 using namespace std;
 
@@ -24,8 +25,12 @@ struct tar_header {
 	char pad[255];
 };
 
-bool nextHeader(ifstream& inputFile, int nextHeaderBlock)
+bool nextHeader(ifstream& inputFile, int nextHeaderBlock, int lengthOfFile, int position)
 {
+	//check if the file is actually done or a eof character was read but there is more content
+	position += (nextHeaderBlock * 512);
+	if (position < lengthOfFile)
+		inputFile.clear();
 	//check if end of file
 	if (inputFile.eof())
 		return false;
@@ -38,12 +43,15 @@ bool nextHeader(ifstream& inputFile, int nextHeaderBlock)
 	
 	if (inputFile.good() && !inputFile.eof())
 		return true;
+
+	return false;
 }
 
-tar_header readHeader(ifstream& inputFile, int nextHeaderBlock)
+tar_header readHeader(ifstream& inputFile, int nextHeaderBlock, int position)
 {
 	tar_header header;
 	inputFile.read((char *)&header, sizeof(header));
+	position += 512;
 	return header;
 }
 
@@ -78,11 +86,14 @@ void writeBody(ifstream& inputFile, string mainDir, tar_header& header) {
 	else
 	{
 		char* body = new char[size];
-		outFile.open(name);
-		inputFile.read(body, size);
-		body[size - 1] = '\0';
+		vector<char> bodyV;
+		bodyV.resize(size);
+		inputFile.read(&bodyV[0], size);
+		bodyV[size -1] = '\0';
 
-		outFile << body;
+		outFile.open(name);
+		for (size_t i = 0; i < bodyV.size(); i++)
+			outFile << bodyV[i];
 		outFile.close();
 
 		cout << "Created File: " << name.c_str() << endl;
@@ -110,13 +121,14 @@ int main(int argc, char *argv[])
 		inputFile.seekg(0, inputFile.end);
 		int lengthOfFile = inputFile.tellg();
 		inputFile.seekg(0, inputFile.beg);
+		int position = 0;
 
 		if (inputFile.good())
 		{
 			do
 			{
 				//read header
-				tar_header header = readHeader(inputFile, nextHeaderBlock);
+				tar_header header = readHeader(inputFile, nextHeaderBlock, position);
 				nextHeaderBlock += ((511 + convertSizeToInt(header.size)) / 512) + 1; //an offset of 512 is the full header
 
 				//fork
@@ -124,8 +136,8 @@ int main(int argc, char *argv[])
 
 				if (pid == 0)
 				{
-					//if child
-					//cout << "reading with child process" << endl;
+					//if child wait to avoid creation of files before directories
+					sleep(2);
 					continue;
 				}
 
@@ -147,7 +159,7 @@ int main(int argc, char *argv[])
 					writeBody(inputFile, mainDir, header);
 				return EXIT_SUCCESS;
 
-			} while (nextHeader(inputFile, nextHeaderBlock)); //there are more headers
+			} while (nextHeader(inputFile, nextHeaderBlock, lengthOfFile, position)); //there are more headers
 
 			inputFile.close();
 			return EXIT_SUCCESS;
